@@ -1,7 +1,7 @@
 # dotnetcore-clean-architecture-blazor-server-client
 dot net core clean architecture with blazor server client and dot net core mvc client
 
-## project library contains below projects
+## Project library contains below projects
 1. dot net core rest web api - backend api
 2. blazor server app - frontend app
 3. dot net core mvc web app - frontend app
