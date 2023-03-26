@@ -16,3 +16,4 @@ dot net core api clean architecture implementation with blazor server client and
 6. ms sql server
 7. fluent validation
 8. azure-ad authentication
+9. support third party authorization using roles and claims  
