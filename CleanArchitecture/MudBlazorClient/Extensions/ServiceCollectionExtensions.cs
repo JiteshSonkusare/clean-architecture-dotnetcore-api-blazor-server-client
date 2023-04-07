@@ -10,7 +10,7 @@ namespace MudBlazorClient.Extensions
     {
         internal static void AddAzureAuthDependencies(this IServiceCollection services, IConfiguration configuration)
         {
-            if (!configuration.GetValue<bool>("AuthConfig:Authentication"))
+            if (!configuration.GetValue<bool>("AuthConfig:IsAuthRequired"))
                 services.AddRazorPages();
             else
             {

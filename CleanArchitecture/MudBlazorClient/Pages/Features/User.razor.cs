@@ -4,9 +4,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Authorization;
 using Client.Infrastructure.Configuration;
-using Client.Infrastructure.Authentication;
 using Client.Infrastructure.ApiClientManagers;
 using ViewModel = Client.Infrastructure.ViewModels;
+using Client.Infrastructure.Security.Configurations;
+using Client.Infrastructure.Security.AuthHandlers.AzureAD;
 
 namespace MudBlazorClient.Pages.Features
 {
@@ -24,11 +25,11 @@ namespace MudBlazorClient.Pages.Features
 
         private UserApiClientManager UserApiClientManager;
 
-        private AuthHandler AuthHandler() => new AuthHandler(AuthConfig?.Value, TokenAcquisition);
+        private AzureAdAuthHandler AuthHandler() => new AzureAdAuthHandler(AuthConfig?.Value, TokenAcquisition);
         
         protected override async Task OnInitializedAsync()
         {
-            UserApiClientManager = new UserApiClientManager(ApiClientConfig.Value, AuthConfig.Value.Authentication ? AuthHandler() : null);
+            UserApiClientManager = new UserApiClientManager(ApiClientConfig.Value, AuthConfig.Value.IsAuthRequired ? AuthHandler() : null);
 
 
             await GetUserAsync();
@@ -47,6 +48,8 @@ namespace MudBlazorClient.Pages.Features
                 _snackBar.Add(response?.ServerError.ToString(), Severity.Error);
             }
         }
+
+
 
         private bool Search(ViewModel.User user)
         {

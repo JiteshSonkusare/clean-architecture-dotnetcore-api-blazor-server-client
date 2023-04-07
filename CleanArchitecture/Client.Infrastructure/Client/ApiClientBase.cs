@@ -1,126 +1,100 @@
-﻿using System.Net.Mime;
+﻿using System.Diagnostics;
 using Client.Infrastructure.Exceptions;
 using Client.Infrastructure.Configuration;
-using Client.Infrastructure.Authentication.Helper;
-using Client.Infrastructure.Authentication.Interfaces;
+using Client.Infrastructure.Security.Interfaces;
+using Client.Infrastructure.Security.Extensions;
 
 namespace Client.Infrastructure.Client
 {
     public abstract class ApiClientBase : IDisposable
     {
-        private readonly HttpClient _client;
-        private readonly IAuthHandler _authHandler;
+        private bool disposedValue;
         private readonly IClientConfig _config;
+        private readonly IAuthHandler? _authHandler;
+        private readonly SocketsHttpHandler httpHandler;
 
-        protected ApiClientBase(IClientConfig config, IAuthHandler authHandler)
+        protected ApiClientBase(IClientConfig config, IAuthHandler? authHandler)
         {
-            _authHandler = authHandler;
             _config = config;
-            _client = new HttpClient() { BaseAddress = new Uri(_config.BaseUrl), Timeout = config?.Timeout ?? new TimeSpan(0, 0, 30) };
-            AddDefaultHeaders(new string[] { MediaTypeNames.Application.Json });
+            _authHandler = authHandler;
+            httpHandler = new SocketsHttpHandler()
+            {
+                UseCookies                  = false,
+                PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30),
+                PooledConnectionLifetime    = TimeSpan.FromSeconds(55),
+                KeepAlivePingPolicy         = HttpKeepAlivePingPolicy.Always,
+                KeepAlivePingDelay          = TimeSpan.FromSeconds(2),
+                KeepAlivePingTimeout        = TimeSpan.FromSeconds(1)
+            };
         }
 
-        /// <summary>
-        /// Helper method to execute HTTP Request
-        /// </summary>
-        /// <param name="request">HTTP request object.</param>
-        /// <param name="cancellation">Cancellation token to early cancel processing.</param>
-        /// <returns></returns>
-        private async Task<ResponseData> ExecuteRequest(HttpRequestMessage request, CancellationToken cancellation)
+        private HttpClient CreateClient()
+        {
+            HttpClient client = new HttpClient(httpHandler, false)
+            {
+                Timeout = _config?.Timeout ?? TimeSpan.FromSeconds(15)
+            };
+
+            if (!string.IsNullOrWhiteSpace(_config?.BaseUrl))
+                client.BaseAddress = new Uri(_config.BaseUrl);
+
+            DefaultRequestHeaders defaultRequestHeaders = GetDefaultRequestHeaders();
+            if (defaultRequestHeaders?.AcceptedMediaTypes?.Length > 0)
+            {
+                foreach (string mediaType in defaultRequestHeaders.AcceptedMediaTypes)
+                    client.DefaultRequestHeaders?.Accept.ParseAdd(mediaType);
+            }
+            if (defaultRequestHeaders?.Headers?.Count() > 0)
+            {
+                foreach (HeaderData header in defaultRequestHeaders.Headers)
+                    client.DefaultRequestHeaders?.Add(header.Name, header.Values);
+            }
+            return client;
+        }
+
+        protected abstract DefaultRequestHeaders GetDefaultRequestHeaders();
+
+        protected async Task<ResponseData> Send(Uri requestUri, HttpMethod method, HttpContent? requestContent, CancellationToken cancellation, params HeaderData[]? requestHeaders)
         {
             try
             {
+                using HttpClient client = CreateClient();
                 if (_authHandler != null)
-                    _client.DefaultRequestHeaders.Authorization = await _authHandler.GetAuthTokenAsync(cancellation).Result.GetAuthorizationHeaderAsync();
-                HttpResponseMessage? response = null;
-                Exception? taskError = null;
-                await _client.SendAsync(request, cancellation).ContinueWith(task =>
                 {
-                    if (task.Exception != null)
-                        taskError = task.Exception;
-                    else
-                        response = task.Result;
-                }, cancellation);
-                if (taskError != null)
-                    throw taskError;
-                if (response == null)
-                    throw new GeneralApplicationException("Unknown error! Could not retrieve response.");
+                    var token = await _authHandler.GetAuthToken(cancellation).ConfigureAwait(false);
+                    client.DefaultRequestHeaders.Authorization = token.GetAuthorizationHeader();
+                }
+                using HttpRequestMessage request = new HttpRequestMessage(method, requestUri);
+                if (requestContent != null)
+                    request.Content = requestContent;
+                if (requestHeaders != null)
+                    foreach (var header in requestHeaders)
+                        request.Headers.Add(header.Name, header.Values);
 
-                string content = string.Empty;
-                await response.Content.ReadAsStringAsync(cancellation).ContinueWith(task =>
-                {
-                    if (task.Exception != null)
-                        taskError = task.Exception;
-                    else
-                        content = task.Result;
-                }, cancellation);
-                if (taskError != null)
-                    throw taskError;
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+                using HttpResponseMessage response = await client.SendAsync(request, cancellation).ConfigureAwait(false);
+                
+                string responseContent = await response.Content.ReadAsStringAsync(cancellation).ConfigureAwait(false);
+                stopwatch.Stop();
 
-                var responseHeaders = new List<HeaderData>();
-                responseHeaders.AddRange(response.Headers.Select(H => new HeaderData(true, H.Key, H.Value.ToArray())));
-                return new ResponseData(response.StatusCode, content, responseHeaders.ToArray());
+                return new ResponseData(response.StatusCode, responseContent, response.Headers, response.TrailingHeaders);
             }
             catch (Exception ex)
             {
-                throw new GeneralApplicationException("Error occurred while executing HTTP request.", ex);
+                //Logger.Error(ex, "Error occurred while executing HTTP request.");
+                throw new GeneralApplicationException($"Failed to call api in ApiClientBase", ex);
             }
         }
 
-        /// <summary>
-        /// Adds HTTP headers to by default send with every HTTP request. It is recommended to call this method in constructor only.
-        /// </summary>
-        /// <param name="acceptedMediaTypes">Media types accepted. Recommended to use constants defined in <see cref="MediaTypeNames"/>.</param>
-        /// <param name="headers">Default headers.</param>
-        protected void AddDefaultHeaders(string[] acceptedMediaTypes, params HeaderData[] headers)
+        public void Dispose()
         {
-            foreach (string mediaType in acceptedMediaTypes)
-                _client.DefaultRequestHeaders.Accept.ParseAdd(mediaType);
-            foreach (HeaderData header in headers)
-                _client.DefaultRequestHeaders.Add(header.Name, header.Values);
-        }
-
-        /// <summary>
-        /// Creates and sends an HTTP request to API.
-        /// </summary>
-        /// <param name="requestUri">API URL to send request to. This can be an absolute URL if BaseUrl is not set in <see cref="IApiClientConfig"/>.</param>
-        /// <param name="method">HTTP method to be used while sending request.</param>
-        /// <param name="cancellation">Token to early cancellation if needed.</param>
-        /// <param name="responseParser">Action triggered when response is received from API. Should be used to parse the received response.</param>
-        /// <param name="requestHeaders">Addtional request specific headers to send along with default request header.</param>
-        protected async Task Send(Uri requestUri, HttpMethod method, CancellationToken cancellation, Action<ResponseData> responseParser, params HeaderData[] requestHeaders)
-        {
-            HttpRequestMessage message = new HttpRequestMessage(method, requestUri);
-            foreach (var header in requestHeaders)
-                message.Headers.Add(header.Name, header.Values);
-            var result = await ExecuteRequest(message, cancellation);
-            responseParser.Invoke(result);
-        }
-
-        /// <summary>
-        /// Creates and sends an HTTP request WITH BODY to API.
-        /// </summary>
-        /// <param name="requestUri">API URL to send request to. This can be an absolute URL if BaseUrl is not set in <see cref="IApiClientConfig"/>.</param>
-        /// <param name="method">HTTP method to be used while sending request.</param>
-        /// <param name="content">HTTP body content to send as part of request.</param>
-        /// <param name="cancellation">Token to early cancellation if needed.</param>
-        /// <param name="responseParser">Action triggered when response is received from API. Should be used to parse the received response.</param>
-        /// <param name="requestHeaders">Addtional request specific headers to send along with default request header.</param>
-        protected async Task Send(Uri requestUri, HttpMethod method, HttpContent content, CancellationToken cancellation, Action<ResponseData> responseParser, params HeaderData[] requestHeaders)
-        {
-            HttpRequestMessage message = new HttpRequestMessage(method, requestUri);
-            if (content != null)
-                message.Content = content;
-            if (requestHeaders != null)
-                foreach (var header in requestHeaders)
-                    message.Headers.Add(header.Name, header.Values);
-            var result = await ExecuteRequest(message, cancellation);
-            responseParser.Invoke(result);
-        }
-
-        void IDisposable.Dispose()
-        {
-            _client.Dispose();
+            if (!disposedValue)
+            {
+                httpHandler.Dispose();
+                disposedValue = true;
+            }
+            GC.SuppressFinalize(this);
         }
     }
 }

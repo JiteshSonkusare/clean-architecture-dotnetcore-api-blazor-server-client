@@ -1,10 +1,11 @@
 ﻿using System.Net;
 using Client.Infrastructure.Routes;
 using Client.Infrastructure.Client;
+using Client.Infrastructure.Extensions;
 using Client.Infrastructure.ViewModels;
 using Client.Infrastructure.Exceptions;
 using Client.Infrastructure.Configuration;
-using Client.Infrastructure.Authentication.Interfaces;
+using Client.Infrastructure.Security.Interfaces;
 
 namespace Client.Infrastructure.ApiClientManagers
 {
@@ -20,26 +21,26 @@ namespace Client.Infrastructure.ApiClientManagers
 
         public async Task<Response<UserViewModel>?> GetAllAsync()
         {
-            Response<UserViewModel>? response = null;
-            try
-            {
-                await Send(new Uri(UserEndpoints.GetAll, UriKind.Relative),
-                        HttpMethod.Get,
-                        CancellationToken.None,
-                        result =>
-                        {
-                            if (result.StatusCode == (int)HttpStatusCode.OK)
-                                response = new Response<UserViewModel>(result, result.StatusCode);
-                            else
-                                throw new ApiException("Get User Failed", 400, result.StatusCode);
-                        });
+            ResponseData result = await Send(
+                    new Uri(UserEndpoints.GetAll, UriKind.Relative),
+                    HttpMethod.Get,
+                    null,
+                     CancellationToken.None,
+                    Array.Empty<HeaderData>()
+                ).ConfigureAwait(false);
 
-                return response;
-            }
-            catch (Exception ex)
-            {
-                throw new GeneralApplicationException("Get Users Failed!", ex);
-            }
+            if (result.StatusCode == (int)HttpStatusCode.NotFound)
+                return new Response<UserViewModel>(new ResponseData(HttpStatusCode.NotFound, Array.Empty<UserViewModel>().ToJson(), result.ResponseHeaders), HttpStatusCode.NotFound);
+            if (result.StatusCode == (int)HttpStatusCode.OK)
+                return new Response<UserViewModel>(result, result.StatusCode);
+
+            throw new GeneralApplicationException(result.Content);
+
+        }
+
+        protected override DefaultRequestHeaders GetDefaultRequestHeaders()
+        {
+            return new DefaultRequestHeaders(new string[] { System.Net.Mime.MediaTypeNames.Application.Json }, Array.Empty<HeaderData>());
         }
     }
 }

@@ -8,7 +8,7 @@
         /// <summary>
         /// Base URL for REST API to connect.
         /// </summary>
-        string BaseUrl { get; }
+        string? BaseUrl { get; }
 
         /// <summary>
         /// Timeout for API request. Default value will be 25 seconds.

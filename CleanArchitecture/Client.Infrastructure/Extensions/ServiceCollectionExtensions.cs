@@ -1,6 +1,7 @@
-﻿using Client.Infrastructure.Configuration;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using Client.Infrastructure.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Client.Infrastructure.Security.Configurations;
 
 namespace Client.Infrastructure.Extensions
 {
