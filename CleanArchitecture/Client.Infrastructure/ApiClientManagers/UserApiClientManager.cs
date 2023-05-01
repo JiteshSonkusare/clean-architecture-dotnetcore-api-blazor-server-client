@@ -2,10 +2,10 @@
 using Client.Infrastructure.Routes;
 using Client.Infrastructure.Client;
 using Client.Infrastructure.Extensions;
-using Client.Infrastructure.ViewModels;
 using Client.Infrastructure.Exceptions;
 using Client.Infrastructure.Configuration;
 using Client.Infrastructure.Security.Interfaces;
+using Client.Infrastructure.Contracts;
 
 namespace Client.Infrastructure.ApiClientManagers
 {
@@ -19,7 +19,7 @@ namespace Client.Infrastructure.ApiClientManagers
             }
         }
 
-        public async Task<Response<UserViewModel>?> GetAllAsync()
+        public async Task<Response<UserResponse>?> GetAllAsync()
         {
             ResponseData result = await Send(
                     new Uri(UserEndpoints.GetAll, UriKind.Relative),
@@ -30,9 +30,9 @@ namespace Client.Infrastructure.ApiClientManagers
                 ).ConfigureAwait(false);
 
             if (result.StatusCode == (int)HttpStatusCode.NotFound)
-                return new Response<UserViewModel>(new ResponseData(HttpStatusCode.NotFound, Array.Empty<UserViewModel>().ToJson(), result.ResponseHeaders), HttpStatusCode.NotFound);
+                return new Response<UserResponse>(new ResponseData(HttpStatusCode.NotFound, Array.Empty<UserResponse>().ToJson(), result.ResponseHeaders), HttpStatusCode.NotFound);
             if (result.StatusCode == (int)HttpStatusCode.OK)
-                return new Response<UserViewModel>(result, result.StatusCode);
+                return new Response<UserResponse>(result, result.StatusCode);
 
             throw new GeneralApplicationException(result.Content);
 

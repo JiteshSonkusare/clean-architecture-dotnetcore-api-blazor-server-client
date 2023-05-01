@@ -1,6 +1,6 @@
 ﻿@page "/User"
 @using MudBlazorClient.Shared.Components
-@using ViewModel = Client.Infrastructure.ViewModels;
+@using Contracts = Client.Infrastructure.Contracts;
 
 <PageTitle>User</PageTitle>
 
@@ -12,7 +12,7 @@
 }
 else
 {
-	<MudTable Items="_userList" Hover="true" Dense="true" Elevation="0" Filter="new Func<ViewModel.User, bool>(Search)" @bind-category="_user">
+	<MudTable Items="_userList" Hover="true" Dense="true" Elevation="0" Filter="new Func<Contracts.User, bool>(Search)" @bind-category="_user">
 		<ToolBarContent>
 			<div class="justify-center mud-text-align-center">
 				<MudButton DisableElevation Href="/create" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" IconColor="Color.Surface">Create</MudButton>
@@ -21,13 +21,13 @@ else
 			<MudTextField @bind-Value="_searchString" Immediate="true" Placeholder="Search for User" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 mb-3"></MudTextField>
 		</ToolBarContent>
 		<HeaderContent>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.FirstName)">First Name</MudTableSortLabel></MudTh>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.LastName)">Last Name</MudTableSortLabel></MudTh>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.UserId)">User Id</MudTableSortLabel></MudTh>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.Mobile)">Mobile</MudTableSortLabel></MudTh>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.Address)">Address</MudTableSortLabel></MudTh>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.Gender)">Gender</MudTableSortLabel></MudTh>
-			<MudTh><MudTableSortLabel SortBy="new Func<ViewModel.User, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.FirstName)">First Name</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.LastName)">Last Name</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.UserId)">User Id</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.Mobile)">Mobile</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.Address)">Address</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.Gender)">Gender</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Contracts.User, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
 			<MudTh Style="text-align:right">Actions</MudTh>
 		</HeaderContent>
 		<RowTemplate>

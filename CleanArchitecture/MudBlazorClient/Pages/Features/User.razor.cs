@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Authorization;
 using Client.Infrastructure.Configuration;
 using Client.Infrastructure.ApiClientManagers;
-using ViewModel = Client.Infrastructure.ViewModels;
+using Contracts = Client.Infrastructure.Contracts;
 using Client.Infrastructure.Security.Configurations;
 using Client.Infrastructure.Security.AuthHandlers.AzureAD;
 
@@ -16,8 +16,8 @@ namespace MudBlazorClient.Pages.Features
     {
         private bool _loaded;
         private string _searchString = "";
-        private ViewModel.User _user = new();
-        private List<ViewModel.User>? _userList = new();
+        private Contracts.User _user = new();
+        private List<Contracts.User>? _userList = new();
 
         [Inject] private ITokenAcquisition TokenAcquisition { get; set; }
         [Inject] private IOptions<AuthConfig> AuthConfig { get; set; }
@@ -51,7 +51,7 @@ namespace MudBlazorClient.Pages.Features
 
 
 
-        private bool Search(ViewModel.User user)
+        private bool Search(Contracts.User user)
         {
             if (string.IsNullOrWhiteSpace(_searchString))
                 return true;

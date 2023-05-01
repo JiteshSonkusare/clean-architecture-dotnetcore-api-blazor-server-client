@@ -1,4 +1,4 @@
-﻿namespace Client.Infrastructure.ViewModels
+﻿namespace Client.Infrastructure.Contracts
 {
     public class User
     {
@@ -13,7 +13,7 @@
         public string Gender    { get; set; } = null!;
     }
 
-    public class UserViewModel
+    public class UserResponse
     {
         public IList<User>? Data { get; set; }
     }

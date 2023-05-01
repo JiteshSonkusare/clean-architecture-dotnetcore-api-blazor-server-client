@@ -7,10 +7,11 @@ namespace Client.Infrastructure.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddClientInfrastrctureDependencies(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddClientInfrastrctureDependencies(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<ApiClientConfig>(configuration.GetSection(nameof(ApiClientConfig)));
             services.Configure<AuthConfig>(configuration.GetSection(nameof(AuthConfig)));
+            return services;
         }
     }
 }
