@@ -30,3 +30,5 @@ msbuild.wrn
 
 # Visual Studio 2015
 .vs/
+/CleanArchitecture/WebApp/appsettings.json
+/CleanArchitecture/MudBlazorClient/appsettings.json
